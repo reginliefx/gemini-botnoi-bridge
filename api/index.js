@@ -5,8 +5,12 @@ export default async function handler(req, res) {
 
     try {
         const userMessage = req.body.message || '';
+        const userId = req.body.userId || req.body.user_id || ''; // รับ LINE User ID จาก Botnoi
+        
         const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+        const LINE_ACCESS_TOKEN = process.env.LINE_ACCESS_TOKEN; // Channel Access Token จาก LINE
 
+        // 1. ยิงหา Gemini API
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -23,10 +27,26 @@ export default async function handler(req, res) {
         const data = await response.json();
         const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'ขออภัย ไม่สามารถดึงข้อมูลได้';
 
-        // ส่งตัวแปร reply กลับไป
-        return res.status(200).json({ reply: replyText });
+        // 2. ถ้ามี userId ให้ยิง Push Message เข้า LINE โดยตรง
+        if (userId && LINE_ACCESS_TOKEN) {
+            await fetch('https://api.line.me/v2/bot/message/push', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${LINE_ACCESS_TOKEN}`
+                },
+                body: JSON.stringify({
+                    to: userId,
+                    messages: [{ type: 'text', text: replyText }]
+                })
+            });
+        }
+
+        // ส่ง Status 200 กลับไปให้ Botnoi เงียบๆ
+        return res.status(200).json({ status: "success" });
 
     } catch (error) {
-        return res.status(500).json({ reply: 'เกิดข้อผิดพลาดในการเชื่อมต่อ AI' });
+        console.error(error);
+        return res.status(500).json({ error: error.message });
     }
 }
