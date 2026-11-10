@@ -9,7 +9,7 @@ export default async function handler(req, res) {
         const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
         const LINE_ACCESS_TOKEN = process.env.LINE_ACCESS_TOKEN;
 
-        // 1. ถาม Gemini API
+        // 1. เรียก Gemini API
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -26,7 +26,7 @@ export default async function handler(req, res) {
         const data = await response.json();
         const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'ขออภัย ไม่สามารถดึงข้อมูลได้';
 
-        // 2. ส่ง Push Message กลับไปที่ LINE ของผู้ใช้โดยตรง (ยิงผ่าน LINE API โดยตรง)
+        // 2. ยิง Push Message ตรงเข้า LINE ของผู้ใช้ (ไม่ผ่าน UI ของ Botnoi)
         if (userId && LINE_ACCESS_TOKEN) {
             await fetch('https://api.line.me/v2/bot/message/push', {
                 method: 'POST',
@@ -41,7 +41,7 @@ export default async function handler(req, res) {
             });
         }
 
-        // คืนค่า JSON เปล่า เพื่อไม่ให้ Botnoi นำข้อความอะไรไปพ่นโชว์
+        // คืนค่า JSON เปล่าให้ Botnoi เพื่อไม่ให้มีข้อความพ่นออกมา
         return res.status(200).json({});
     } catch (error) {
         console.error(error);
