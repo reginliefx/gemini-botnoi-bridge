@@ -7,7 +7,7 @@ export default async function handler(req, res) {
         const userMessage = req.body.message || '';
         const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-        // ยิงไปหา Gemini API
+        // 1. ยิงไปหา Gemini API
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -22,12 +22,25 @@ export default async function handler(req, res) {
         });
 
         const data = await response.json();
-        
-        // แกะตัวหนังสือคำตอบชั้นเดียวส่งกลับให้ Botnoi
         const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'ขออภัย ไม่สามารถดึงข้อมูลได้';
 
-        return res.status(200).json({ reply: replyText });
+        // 2. ส่งกลับในโครงสร้าง Response ที่ Botnoi นำไปพ่นลง LINE ได้ทันที
+        return res.status(200).json({
+            messages: [
+                {
+                    type: "text",
+                    text: replyText
+                }
+            ]
+        });
     } catch (error) {
-        return res.status(500).json({ reply: 'เกิดข้อผิดพลาดในการเชื่อมต่อ AI' });
+        return res.status(500).json({
+            messages: [
+                {
+                    type: "text",
+                    text: "เกิดข้อผิดพลาดในการเชื่อมต่อ AI"
+                }
+            ]
+        });
     }
 }
